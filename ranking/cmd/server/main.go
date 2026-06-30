@@ -8,10 +8,13 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -26,10 +29,44 @@ import (
 )
 
 func main() {
+	healthCheck := flag.Bool("health-check", false, "probe /health and exit (for container healthchecks)")
+	flag.Parse()
+
+	if *healthCheck {
+		if err := probeHealth(); err != nil {
+			fmt.Fprintln(os.Stderr, "health check failed:", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	if err := run(); err != nil {
 		slog.Error("fatal", "error", err)
 		os.Exit(1)
 	}
+}
+
+// probeHealth performs an HTTP GET against the local /health endpoint. It is the
+// container healthcheck for distroless images, which have no shell or curl.
+func probeHealth() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	addr := cfg.HTTPAddr
+	if strings.HasPrefix(addr, ":") {
+		addr = "127.0.0.1" + addr
+	}
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get("http://" + addr + "/health")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status %d", resp.StatusCode)
+	}
+	return nil
 }
 
 func run() error {
