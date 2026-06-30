@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "feature_columns": [
+    "age",
+    "gender_code",
+    "country_code",
+    "device_code",
+    "hour",
+    "day_of_week",
+    "user_historical_ctr",
+    "ad_historical_ctr",
+    "campaign_budget",
+    "ad_category_code",
+    "user_ad_prior_impressions",
+    "user_ad_prior_clicks",
+    "position"
+  ],
+  "categorical_vocabs": {
+    "gender": [
+      "female",
+      "male",
+      "unknown"
+    ],
+    "country": [
+      "US",
+      "GB",
+      "IN",
+      "DE",
+      "BR",
+      "JP",
+      "NG",
+      "other"
+    ],
+    "device": [
+      "mobile",
+      "desktop",
+      "tablet"
+    ],
+    "ad_category": [
+      "retail",
+      "finance",
+      "gaming",
+      "travel",
+      "food",
+      "auto",
+      "tech",
+      "health"
+    ]
+  }
+}
