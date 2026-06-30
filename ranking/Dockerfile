@@ -1,5 +1,5 @@
 # Multi-stage build for the Go ranking service. Produces a small static image.
-FROM golang:1.24-alpine AS build
+FROM golang:1.25-alpine AS build
 
 WORKDIR /src
 
