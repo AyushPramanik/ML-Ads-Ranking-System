@@ -1,0 +1,80 @@
+# Full local stack for the ML Ads Ranking System.
+#
+# Flow:
+#   1. `trainer` runs once: generates the dataset and trains/exports the model
+#      into the shared `artifacts` volume, then exits.
+#   2. `ranking` waits for postgres + redis to be healthy and for `trainer` to
+#      complete, then serves the API reading the model from `artifacts`.
+#
+# Usage: `make up` (build + start) / `make down` (stop + clean).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ads}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ads}
+      POSTGRES_DB: ${POSTGRES_DB:-ads_ranking}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ads} -d ${POSTGRES_DB:-ads_ranking}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  trainer:
+    build:
+      context: ./ml
+    volumes:
+      - data:/data
+      - artifacts:/artifacts
+    restart: "no"
+
+  ranking:
+    build:
+      context: ./ranking
+    environment:
+      RANKING_HTTP_ADDR: ":8080"
+      RANKING_LOG_LEVEL: ${RANKING_LOG_LEVEL:-info}
+      RANKING_LOG_FORMAT: ${RANKING_LOG_FORMAT:-json}
+      RANKING_MODEL_PATH: /artifacts/model.json
+      RANKING_FEATURE_SPEC_PATH: /artifacts/feature_spec.json
+      RANKING_POSTGRES_DSN: postgres://${POSTGRES_USER:-ads}:${POSTGRES_PASSWORD:-ads}@postgres:5432/${POSTGRES_DB:-ads_ranking}?sslmode=disable
+      RANKING_REDIS_ADDR: redis:6379
+      RANKING_FEATURE_CACHE_TTL: ${RANKING_FEATURE_CACHE_TTL:-300s}
+    ports:
+      - "8080:8080"
+    volumes:
+      - artifacts:/artifacts:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      trainer:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/app/ranking", "-health-check"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  pgdata:
+  data:
+  artifacts:
