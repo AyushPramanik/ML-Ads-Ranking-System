@@ -1,0 +1,32 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.env
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- Go ----
+/ranking/bin/
+*.test
+*.out
+
+# ---- Data & model artifacts (regenerated, not committed) ----
+/data/*.parquet
+/data/*.csv
+/artifacts/*.json
+/artifacts/*.txt
+/artifacts/*.pkl
+
+# ---- Editor / OS ----
+.idea/
+.vscode/
+.DS_Store
